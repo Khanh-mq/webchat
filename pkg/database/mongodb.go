@@ -16,7 +16,6 @@ func ConnectDatabase(nameCollection string) *mongo.Collection {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 		return nil
-
 	}
 	database := os.Getenv("URL")
 	namedatabse := os.Getenv("NAMEDATABASE")
