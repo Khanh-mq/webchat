@@ -82,6 +82,27 @@ func (u *userRepository) ChangePassword(c context.Context, uuid interface{}, pas
 	}
 	return nil
 }
+func (u userRepository) GetAllUserRepo(c context.Context) ([]*User, error) {
+	cursor, err := u.DB.Find(c, bson.M{})
+	if err != nil {
+		return nil, err
+	}
+	var users []*User
+	err = cursor.All(c, &users)
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+func (u *userRepository) RoleRightsRepo(c context.Context, uuid, role interface{}) error {
+	filter := bson.M{"userid": uuid}
+	update := bson.M{"$set": bson.M{"role-system": role}}
+	_, err := u.DB.UpdateOne(c, filter, update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
 type UserRepositoryInterface interface {
 	CreateUserRepo(c context.Context, user User) (*User, error)
@@ -89,4 +110,6 @@ type UserRepositoryInterface interface {
 	GetUserRepoById(c context.Context, uuid interface{}) (*User, bool, error)
 	UpdateUserRepo(c context.Context, id interface{}, user UpdateUser) error
 	ChangePassword(c context.Context, uuid interface{}, password string) error
+	GetAllUserRepo(c context.Context) ([]*User, error)
+	RoleRightsRepo(c context.Context, uuid, role interface{}) error
 }

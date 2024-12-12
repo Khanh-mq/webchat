@@ -84,3 +84,37 @@ func (u *userHandler) ChangePasswordHandler(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{"status": "success"})
 }
+func (u *userHandler) RoleRightsHandler(c *gin.Context) {
+	var role JsonRole
+	err := c.ShouldBindJSON(&role)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	//chuyen thanh itemrole
+
+	uuid := c.Param("uuid")
+	err = u.service.RoleRightsSer(c, uuid, role.Role)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"status": "success"})
+}
+func (u *userHandler) GetUserById(c *gin.Context) {
+	uuid := c.Param("uuid")
+	user, err := u.service.GetUserByIdService(c, uuid)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"user": user})
+}
+func (u *userHandler) GetUserAll(c *gin.Context) {
+	user, err := u.service.GetAllUserService(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "don't service"})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"user": user})
+}

@@ -24,7 +24,9 @@ func (u *userService) registerService(c context.Context, user User) (*User, erro
 	// neu ton tai thi  ra ve error
 
 	user.UserId = uuid.New().String()
-	user.Role = Member
+	if user.Role == nil {
+		*user.Role = Member
+	}
 	user.CreateTime = time.Now()
 
 	_, ok, _ := u.userRepo.GetUserRepoByEmail(c, user.Email)
@@ -64,7 +66,7 @@ func (u *userService) Login(c context.Context, login Login) (*InFormation, *stri
 
 	information := &InFormation{
 		Username: info.Username,
-		Role:     info.Role,
+		Role:     *info.Role,
 	}
 	// tra ve token cho user
 	return information, &token, err
@@ -126,4 +128,28 @@ func (u *userService) ChangePassword(c context.Context, uuid interface{}, passwo
 	}
 	return nil
 
+}
+func (u userService) GetAllUserService(c context.Context) ([]*User, error) {
+	users, err := u.userRepo.GetAllUserRepo(c)
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+func (u userService) RoleRightsSer(c context.Context, uuid interface{}, role string) error {
+	//  kiem tra xem user co toi tai hay khong
+	item, err := ParseStr2ItemRole(role)
+	if err != nil {
+		return err
+	}
+
+	_, exists, _ := u.userRepo.GetUserRepoById(c, uuid)
+	if exists == false {
+		return errors.New("user not exists")
+	}
+	err = u.userRepo.RoleRightsRepo(c, uuid, item)
+	if err != nil {
+		return err
+	}
+	return nil
 }

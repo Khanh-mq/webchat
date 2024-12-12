@@ -17,13 +17,15 @@ const (
 	Viewer
 )
 
-var allItemRole = [3]string{"Admin", "Member", "Viewer"}
+var allItemRole = [3]string{"admin", "member", "viewer"}
 
 func (i ItemRole) String() string {
 	return allItemRole[i]
 }
 
 func ParseStr2ItemRole(s string) (ItemRole, error) {
+	//chuyen het ve chu thuong
+	s = strings.ToLower(s)
 	for i := range allItemRole {
 		if allItemRole[i] == s {
 			return ItemRole(i), nil
@@ -56,7 +58,8 @@ func (i ItemRole) MarshalJSON() ([]byte, error) {
 func (i *ItemRole) UnmarshalJSON(b []byte) error {
 	str := strings.ReplaceAll(string(b), "\"", "")
 	itemValue, err := ParseStr2ItemRole(str)
-	log.Printf("unmarshaljson: ", str)
+	log.Printf("unmarshaljson: %v ", str)
+	log.Printf("itemValue:  %v ", itemValue)
 	if err != nil {
 		return fmt.Errorf("failed to unmarshal value: %v", str)
 	}
@@ -75,7 +78,7 @@ type User struct {
 	Password   string    `json:"password" bson:"password"`
 	CreateTime time.Time `json:"create_time" bson:"create_time"`
 	UpdateTime time.Time `json:"update_time" bson:"update_time"`
-	Role       ItemRole  `json:"role-system" bson:"role-system"`
+	Role       *ItemRole `json:"role-system" bson:"role-system"`
 }
 type Login struct {
 	Email    string `json:"email" bson:"email"`
@@ -93,4 +96,8 @@ type UpdateUser struct {
 type ChangePassword struct {
 	OldPassword string `json:"old_password,omitempty" bson:"old_password,omitempty"`
 	NewPassword string `json:"new_password,omitempty" bson:"new_password,omitempty"`
+}
+
+type JsonRole struct {
+	Role string `json:"role-system" bson:"role-system"`
 }
