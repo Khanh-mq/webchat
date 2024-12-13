@@ -8,11 +8,13 @@ import (
 )
 
 func main() {
-	var dataMongo = database.ConnectDatabase("user")
+	var dataMongoUser = database.ConnectDatabase("user")
+	var dataMongoRoom = database.ConnectDatabase("rooms")
 
 	r := gin.Default()
 
-	router.User(r, dataMongo)
+	router.User(r, dataMongoUser)
+	router.Room(r, dataMongoRoom)
 
 	err := r.Run("localhost:8080")
 	if err != nil {
