@@ -27,6 +27,7 @@ func Room(r *gin.Engine, db *mongo.Collection) {
 		user.POST("/:roomId/leave")
 		//xem danh sach thanh vien trong phong
 		// viec xem danh sach ban phai co trong room da
+
 		user.GET("/:roomId/users", newHand.GetUserRoomHand)
 
 		// cap nhat thong tin phong  admin-system and aadmin-group
@@ -35,7 +36,9 @@ func Room(r *gin.Engine, db *mongo.Collection) {
 	// admin
 	admin := r.Group("/admin", middleware.AuthMiddleware(), middleware.RoleMiddleware(user2.Admin, user2.Member))
 	{
-		admin.POST("/:roomId/update")
+		// cap nhat trong them so nguoi hay doi ten phong  //
+		//  day admin hoawxj admin trong room deu co the
+		admin.POST("/:roomId/update", newHand.UpdateRoomHand)
 
 		//xoa phong
 		admin.POST("/:roomId/delete")

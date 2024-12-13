@@ -58,7 +58,7 @@ func (r *roomHandler) JoinRoomHand(c *gin.Context) {
 	err := r.roomSer.joinRoomSer(c, roommId, uuid)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"data": errors.New("data error"),
+			"data": "data error",
 		})
 		return
 	}
@@ -86,4 +86,32 @@ func (r *roomHandler) GetUserRoomHand(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"data": result,
 	})
+}
+func (r *roomHandler) UpdateRoomHand(c *gin.Context) {
+	var update updateRoom
+	err := c.ShouldBind(&update)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"data": "error json ",
+		})
+		return
+	}
+
+	uuidUser := c.MustGet("uuid").(string)
+	log.Printf("fomat : %T \t  , %v ", uuidUser, uuidUser)
+	role := c.MustGet("role").(string)
+	log.Printf("role_system: %v ", c.MustGet("role").(string))
+	uuidRoom := c.Param("roomId")
+	err = r.roomSer.UpdateRoomSer(c, uuidRoom, update, role, uuidUser)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"data": err,
+		})
+		log.Println(err)
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data": "success",
+	})
+
 }
