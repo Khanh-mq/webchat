@@ -17,6 +17,19 @@ func NewRoomRepo(db *mongo.Collection) *roomRepo {
 	}
 }
 
+type IRoomRepo interface {
+	CreateRoomRepo(c context.Context, newRoom rooms) error
+	GetListRoomRepo(c context.Context) ([]*rooms, error)
+	JoinRoomRepo(c context.Context, roomName string, member MemberRole) error
+	CheckExistsRoomRepo(c context.Context, roomId, uuid string) (*MemberRole, bool, error)
+	GetUserInRoomRepo(c context.Context, roomId string) ([]MemberRole, error)
+	UpdateRoomRepo(c context.Context, roomId string, updateRoom updateRoom) error
+	GetRoomByIdRepo(c context.Context, roomId string) (*ViewRoom, bool, error)
+	DeletedRoomRepo(c context.Context, roomId string) error
+	AddUserInRoomRepo(c context.Context, roomId string, user MemberRole) error
+	DeletedUserInRoom(c context.Context, roomId, uuid string) error
+}
+
 //  ham kiem tra su ton tai cua room hay chua
 //  xem  cos ten nao trung voi ten room  muon tao  hay khong?
 
@@ -27,6 +40,16 @@ func (r *roomRepo) GetRoomByNameRepo(c context.Context, roomName string) (bool, 
 		return false, err
 	}
 	return true, nil
+}
+func (r *roomRepo) DeletedUserInRoom(c context.Context, roomId, uuid string) error {
+	filter := bson.M{"roomId": roomId,
+		"roleMember.userId": uuid,
+	}
+	_, err := r.DB.DeleteOne(c, filter)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // truong hop nay  neu ma
@@ -134,13 +157,20 @@ func (r *roomRepo) UpdateRoomRepo(c context.Context, roomId string, updateRoom u
 	return nil
 
 }
-
-type IRoomRepo interface {
-	CreateRoomRepo(c context.Context, newRoom rooms) error
-	GetListRoomRepo(c context.Context) ([]*rooms, error)
-	JoinRoomRepo(c context.Context, roomName string, member MemberRole) error
-	CheckExistsRoomRepo(c context.Context, roomId, uuid string) (*MemberRole, bool, error)
-	GetUserInRoomRepo(c context.Context, roomId string) ([]MemberRole, error)
-	UpdateRoomRepo(c context.Context, roomId string, updateRoom updateRoom) error
-	GetRoomByIdRepo(c context.Context, roomId string) (*ViewRoom, bool, error)
+func (r *roomRepo) DeletedRoomRepo(c context.Context, roomId string) error {
+	filter := bson.M{"roomId": roomId}
+	_, err := r.DB.DeleteOne(c, filter)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (r *roomRepo) AddUserInRoomRepo(c context.Context, roomId string, user MemberRole) error {
+	filter := bson.M{"roomId": roomId}
+	update := bson.M{"$push": bson.M{"roleMember": user}}
+	_, err := r.DB.UpdateOne(c, filter, update)
+	if err != nil {
+		return err
+	}
+	return nil
 }

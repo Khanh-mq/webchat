@@ -113,5 +113,58 @@ func (r *roomHandler) UpdateRoomHand(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"data": "success",
 	})
+}
+func (r *roomHandler) DeletedRoomHand(c *gin.Context) {
+	roomId := c.Param("roomId")
+	// thuwc hien xoa phong \
+	err := r.roomSer.DeleteRoomSer(c, roomId)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"data": "data error",
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data": "success",
+	})
+}
+func (r *roomHandler) AddUserInRoomHand(c *gin.Context) {
+	//
+	var userInRoom MemberRole
+	err := c.ShouldBind(&userInRoom)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"data": "error json ",
+		})
+		return
+	}
+	roomId := c.Param("roomId")
+	err = r.roomSer.AddUserInRoomSer(c, roomId, userInRoom)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"data": err,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data": "success",
+	})
+
+}
+func (r *roomHandler) DeleteUserInRoomHand(c *gin.Context) {
+
+	//deleted
+	roomId := c.Param("roomId")
+	userId := c.Param("uuid")
+	err := r.roomSer.DeletedUserInRoomSer(c, roomId, userId)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"data": err,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data": "success",
+	})
 
 }

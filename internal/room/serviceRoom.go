@@ -3,7 +3,6 @@ package room
 import (
 	"context"
 	"errors"
-	"log"
 	"video-call-project/internal/user"
 )
 
@@ -65,28 +64,50 @@ func (r *roomService) GetUserInRoomSer(c context.Context, roomId string, userId 
 
 }
 func (r *roomService) UpdateRoomSer(c context.Context, roomId string, update updateRoom, role interface{}, uuidUser string) error {
-	//  kiem tra xem co ton tai hay khong
-	if role != user.Admin {
-		roles, exists, _ := r.roomRepo.CheckExistsRoomRepo(c, roomId, uuidUser)
-		if exists == false {
-			return errors.New("user don't exists in room")
-		}
-		log.Printf("role user in room : %v  ", roles.Role)
-		if roles.Role == user.Admin {
-			_, exists, err := r.roomRepo.GetRoomByIdRepo(c, roomId)
-			if exists == false {
-				return err
-			}
-			err = r.roomRepo.UpdateRoomRepo(c, roomId, update)
-			if err != nil {
-				return err
-			}
-		} else {
-			return errors.New("role not exists in room")
-		}
-		return nil
-	} else {
-		return errors.New("role not exists in room")
+	_, exists, _ := r.roomRepo.GetRoomByIdRepo(c, roomId)
+	if exists == false {
+		return errors.New("user don't exists in room")
 	}
+	if err := r.roomRepo.UpdateRoomRepo(c, roomId, update); err != nil {
+		return err
+	}
+	return nil
+}
 
+func (r *roomService) DeleteRoomSer(c context.Context, roomId string) error {
+	// o day ta len thuc hien khi xoa phong thi nen xoa luon tin nhan cua phong  di nua
+	// kiem tra xem phong co ton tai hay khong
+	_, exists, err := r.roomRepo.GetRoomByIdRepo(c, roomId)
+	if err != nil || exists == false {
+		return errors.New("room don't exists ")
+
+	}
+	//  xoa phong do
+	err = r.roomRepo.DeletedRoomRepo(c, roomId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (r *roomService) AddUserInRoomSer(c context.Context, roomId string, user1 MemberRole) error {
+	//  kiem tra xem user co trong room hay chua
+	_, exists, _ := r.roomRepo.CheckExistsRoomRepo(c, roomId, user1.UserId)
+	if exists == true {
+		// neu ton tai
+		return errors.New("user exists in room")
+	}
+	user1.Role = user.Member
+	//  chua ton tai thi them vao trong room
+	err := r.roomRepo.AddUserInRoomRepo(c, roomId, user1)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (r *roomService) DeletedUserInRoomSer(c context.Context, roomId string, uuid string) error {
+	err := r.roomRepo.DeletedUserInRoom(c, roomId, uuid)
+	if err != nil {
+		return err
+	}
+	return nil
 }

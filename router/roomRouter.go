@@ -4,7 +4,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
 	"video-call-project/internal/room"
-	user2 "video-call-project/internal/user"
 	"video-call-project/pkg/middleware"
 )
 
@@ -34,26 +33,26 @@ func Room(r *gin.Engine, db *mongo.Collection) {
 
 	}
 	// admin
-	admin := r.Group("/admin", middleware.AuthMiddleware(), middleware.RoleMiddleware(user2.Admin, user2.Member))
+	admin := r.Group("/admin", middleware.AuthMiddleware(), middleware.RoleAdminMiddleware(newRepo))
 	{
 		// cap nhat trong them so nguoi hay doi ten phong  //
 		//  day admin hoawxj admin trong room deu co the
 		admin.POST("/:roomId/update", newHand.UpdateRoomHand)
 
 		//xoa phong
-		admin.POST("/:roomId/delete")
+		admin.POST("/:roomId/delete", newHand.DeletedRoomHand)
 		//  them nguoi dung vao phong
-		admin.POST("/:roomId/users")
+		admin.POST("/:roomId/users", newHand.AddUserInRoomHand)
 
 		// xoa nguoi ra khoi phong
 
-		admin.POST("/:roomId/users/:uuid")
+		admin.POST("/:roomId/users/:uuid", newHand.DeleteUserInRoomHand)
 
 		//  phan quyen nguoi dung trong room
 		admin.POST("/:roomId/users/:uuid/role")
 
 		// khoa mo phong
-
+		//
 		admin.POST("/:roomId/lock")
 
 	}
