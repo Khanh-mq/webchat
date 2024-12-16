@@ -49,7 +49,7 @@ func Room(r *gin.Engine, db *mongo.Collection) {
 		admin.POST("/:roomId/users/:uuid", newHand.DeleteUserInRoomHand)
 
 		//  phan quyen nguoi dung trong room
-		admin.POST("/:roomId/users/:uuid/role")
+		admin.POST("/:roomId/users/:uuid/role", newHand.UpdateRoleInRoomHand)
 
 		// khoa mo phong
 		//

@@ -168,3 +168,29 @@ func (r *roomHandler) DeleteUserInRoomHand(c *gin.Context) {
 	})
 
 }
+func (r *roomHandler) UpdateRoleInRoomHand(c *gin.Context) {
+	//  lay uuid va room tu  param
+	var roleNew struct {
+		Role string `json:"role"`
+	}
+	uuid := c.Param("uuid")
+	roomId := c.Param("roomId")
+	err := c.ShouldBind(&roleNew)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"data": "error json ",
+		})
+		return
+	}
+	log.Println(roleNew.Role)
+	err = r.roomSer.UpdateRoleInRoomSer(c, roomId, uuid, roleNew.Role)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"data": err,
+		})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"data": "success",
+	})
+}

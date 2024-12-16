@@ -5,6 +5,7 @@ import (
 	"errors"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
+	"video-call-project/internal/user"
 )
 
 type roomRepo struct {
@@ -15,6 +16,10 @@ func NewRoomRepo(db *mongo.Collection) *roomRepo {
 	return &roomRepo{
 		DB: db,
 	}
+}
+func NewRoomChatRepo(db *mongo.Database) *roomRepo {
+	return &roomRepo{
+		DB: db.Collection("rooms")}
 }
 
 type IRoomRepo interface {
@@ -28,6 +33,7 @@ type IRoomRepo interface {
 	DeletedRoomRepo(c context.Context, roomId string) error
 	AddUserInRoomRepo(c context.Context, roomId string, user MemberRole) error
 	DeletedUserInRoom(c context.Context, roomId, uuid string) error
+	UpdateRoleRepo(c context.Context, roomId, uuid string, role user.ItemRole) error
 }
 
 //  ham kiem tra su ton tai cua room hay chua
@@ -168,6 +174,21 @@ func (r *roomRepo) DeletedRoomRepo(c context.Context, roomId string) error {
 func (r *roomRepo) AddUserInRoomRepo(c context.Context, roomId string, user MemberRole) error {
 	filter := bson.M{"roomId": roomId}
 	update := bson.M{"$push": bson.M{"roleMember": user}}
+	_, err := r.DB.UpdateOne(c, filter, update)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (r *roomRepo) UpdateRoleRepo(c context.Context, roomId, uuid string, role user.ItemRole) error {
+	filter := bson.M{
+		"roomId":     roomId,
+		"roleMember": bson.M{"$elemMatch": bson.M{"userId": uuid}},
+	}
+	// Cập nhật role của user
+	update := bson.M{
+		"$set": bson.M{"roleMember.$.role": role},
+	}
 	_, err := r.DB.UpdateOne(c, filter, update)
 	if err != nil {
 		return err

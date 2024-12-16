@@ -3,6 +3,7 @@ package room
 import (
 	"context"
 	"errors"
+	"log"
 	"video-call-project/internal/user"
 )
 
@@ -106,6 +107,24 @@ func (r *roomService) AddUserInRoomSer(c context.Context, roomId string, user1 M
 }
 func (r *roomService) DeletedUserInRoomSer(c context.Context, roomId string, uuid string) error {
 	err := r.roomRepo.DeletedUserInRoom(c, roomId, uuid)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (r *roomService) UpdateRoleInRoomSer(c context.Context, roomId, uuid string, role string) error {
+	// chuyen role sang item role
+	// kiem tra xem user co trong room hay khong
+	_, exists, _ := r.roomRepo.CheckExistsRoomRepo(c, roomId, uuid)
+	if exists == false {
+		return errors.New("user dont exists in room ")
+	}
+	roleItem, err := user.ParseStr2ItemRole(role)
+	if err != nil {
+		return err
+	}
+	log.Println(roleItem)
+	err = r.roomRepo.UpdateRoleRepo(c, roomId, uuid, roleItem)
 	if err != nil {
 		return err
 	}
