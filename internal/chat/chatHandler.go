@@ -1,6 +1,7 @@
 package chat
 
 import (
+	"errors"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"log"
@@ -26,6 +27,76 @@ type chatHandler struct {
 func NewChatHandler(chat chatService) *chatHandler {
 	return &chatHandler{chat: chat}
 }
+func (c *chatHandler) sendHistoryChatHandler(ctx *gin.Context, conn *websocket.Conn) error {
+	roomId := ctx.Param("roomId")
+	// lay lich su tin nhan
+	history, err := c.chat.ChatRepo.GetChatInSendToRepo(ctx, roomId)
+	if err != nil {
+		return err
+	}
+	//  gui tin nhan vao cho cac memeber in room
+	err = conn.WriteJSON(history)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (c *chatHandler) registerClient(ctx *gin.Context, conn *websocket.Conn) error {
+	//  kiem tra xem use co trong database hay chua (do user exists in room ? )
+	uuid := ctx.MustGet("uuid").(string)
+	roomId := ctx.Param("roomId")
+	if _, exists, _ := c.chat.Room.CheckExistsRoomRepo(ctx, roomId, uuid); exists == false {
+		return errors.New("use dont exists in room")
+	}
+	if _, exists := clients[conn]; exists {
+		log.Println("client is already registered")
+		return errors.New("client is already registered")
+	}
+	clients[conn] = true
+	log.Println("client is registered")
+	return nil
+}
+func (c *chatHandler) unregisterClient(conn *websocket.Conn) error {
+	//  thoat ket loi  cua user
+	delete(clients, conn)
+	conn.Close()
+	return nil
+}
+func (c *chatHandler) inComingMessageHandler(ctx *gin.Context, conn *websocket.Conn) error {
+	//  gui tin nhan den cho database de luu voa trong csdl
+
+	roomId := ctx.Param("roomId")
+	uuid := ctx.MustGet("uuid").(string)
+	//  doc tin nhan tu userMessage
+	for {
+		var text ChatText
+		err := conn.ReadJSON(&text)
+		if err != nil {
+			return err
+		}
+		msg := ChatContent{
+			Content:  text.Content,
+			UserName: uuid,
+			TimeChat: time.Now(),
+		}
+		//  luu vao csdl cho user
+		err = c.chat.ChatRepo.NewChat(ctx, roomId, msg)
+		if err != nil {
+			return err
+		}
+		//  chuyen tin nhan ve cho broadcast
+		broadcast <- msg
+	}
+}
+func (c *chatHandler) broadcastSendMessageToClient(msg ChatContent) {
+	for conn := range clients {
+		err := conn.WriteJSON(msg)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+	}
+}
 
 // sau khi chuyen  cai dat duoc vao thi ket hop voi csdl
 func (c *chatHandler) ConnectHandler(ctx *gin.Context) {
@@ -36,17 +107,12 @@ func (c *chatHandler) ConnectHandler(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upgrade connection to WebSocket"})
 		return
 	}
-
-	// Check if user is already in a room
-	if _, exists := clients[conn]; exists {
-		log.Printf("Client already connected: %v", conn.RemoteAddr())
-		conn.Close()
+	//  kiem tra ton tai va cho vao trong phong
+	err = c.registerClient(ctx, conn)
+	if err != nil {
+		log.Println(err)
 		return
 	}
-
-	// Register new client
-	clients[conn] = true
-
 	// Close connection when function ends
 	defer func() {
 		delete(clients, conn)
@@ -54,68 +120,27 @@ func (c *chatHandler) ConnectHandler(ctx *gin.Context) {
 	}()
 	// sau khi ket noi , gui tin nhan cu cho user khi connect room
 	// ty thưcj hiện kiểm tra quyền trong middleware
-	roomId := ctx.Param("roomId")
-	uuid, exists := ctx.MustGet("uuid").(string)
-	if !exists {
-		log.Printf("UUID not found in context")
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "UUID not found in context"})
-		return
-	}
 
-	historyMessage, err := c.chat.GetChatInRoomService(ctx, roomId)
+	// lay lich su tin nhan ra
+	err = c.sendHistoryChatHandler(ctx, conn)
 	if err != nil {
-		log.Printf("Failed to get history message: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get history message"})
+		log.Println(err)
 		return
 	}
-
-	// Read messages from this connection
-	// hien tin nhan cu cho user
-	err = conn.WriteJSON(historyMessage)
+	//  su ly  nhan tin va luu vao csdl
+	err = c.inComingMessageHandler(ctx, conn)
 	if err != nil {
-		log.Printf("Failed to send history message: %v", err)
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to send history message"})
+		log.Println(err)
 		return
 	}
-	for {
-		var text ChatText
 
-		err := conn.ReadJSON(&text)
-		if err != nil {
-			log.Printf("Connection read error: %v", err)
-			delete(clients, conn)
-			break
-		}
-		var msg = ChatContent{
-			Content:  text.Content,
-			UserName: uuid,
-			TimeChat: time.Now(),
-		}
-		//  luyw tin nhan vao cơ sở dư liệu
-		err = c.chat.ChatService(ctx, roomId, uuid, msg)
-		if err != nil {
-			log.Printf("Failed to chat message: %v", err)
-			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to chat message"})
-			return
-		}
-		// Send received message to broadcast channel
-		broadcast <- msg
-	}
 }
 func (c *chatHandler) HandleMessages() {
 	for {
 		// Nhận tin nhắn từ kênh broadcast
 		msg := <-broadcast
-
 		// Gửi tin nhắn đến tất cả client đã kết nối
-		for client := range clients {
-			err := client.WriteJSON(msg)
-			if err != nil {
-				log.Printf("Lỗi khi gửi tin nhắn: %v", err)
-				client.Close()
-				delete(clients, client) // Xóa client nếu xảy ra lỗi
-			}
-		}
+		c.broadcastSendMessageToClient(msg)
 	}
 
 }
